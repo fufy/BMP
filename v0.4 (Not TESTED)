@@ -1,0 +1,69 @@
+#include < amxmod >
+#include < amxmisc >
+
+new const BlockMsg[ ]	=	"**** Multiple Printed Text detected!!!!";
+new const szFileLog[ ]	=	"bmp_log";
+
+new const PLUGIN[ ]		=	"Block Multiple Prints",
+	 VERSION[ ]	=	"v0.4",
+	  AUTHOR[ ]	=	"Craxor"
+
+new gLastUserMessage[33][192] , g_iPunishType, g_iSensitiveCaseDetect, g_szSkipFlags;
+
+public plugin_init( )
+{
+	register_plugin
+	(
+		.plugin_name	=	PLUGIN,
+		.version		=	VERSION,
+		.author		=	AUTHOR
+	);
+
+	register_message( get_user_msgid("SayText") , "Message_SayText" ); 
+
+	g_iPunishType		=	register_cvar( "bmp_punish_type" , "1"  );
+	g_iSensitiveCaseDetect	=	register_cvar( "bmp_sensitive_detect", "1" );
+	g_szSkipFlags		=	register_cvar( "bmp_skip_flags", "a" );
+}
+
+public client_putinserver( id ) 
+{
+	if( is_user_connected( id ) )
+		gLastUserMessage[id][0] = EOS;
+}
+
+public Message_SayText( ) 
+{
+	new szCurMessage[192] , id = get_msg_arg_int( 1 ), szFlagsCvar, szName[32], szAuthId[35], szIp[33];
+
+	get_msg_arg_string( 4 , szCurMessage , charsmax( szCurMessage ) ); 
+	get_pcvar_string( szFlagsCvar, charsmax( szFlagsCvar ), g_szSkipFlags );
+	get_user_name( id, szName, charsmax( szName ) );
+	get_user_authid( id, szAuthId, charsmax( szAuthId ) );
+	get_user_ip( id, szIp, charsmax( szIp ), 1 );
+
+	
+   	if( is_user_connected( id )	&& !has_all_flags( szFlagsCvar ) ) 
+    	{
+		if( get_pcvar_num( g_iSensitiveCaseDetect ) ? equal( szCurMessage, gLastUserMessage[id] )  : equali( szCurMessage, gLastUserMessage[id] ) )
+		{
+			switch( get_pcvar_num( g_iPunishType ) )
+			{
+				case 1: 
+				{
+					set_msg_arg_string( 2 , BlockMsg );
+					log_to_file( szFileLog, "Name: %s / IP: %s / STEAM: %s / Multiped printed message: %s "szName, szIp, szAuthid, szCurMessage );
+				}
+				case 2: server_cmd( "kick #%d %s" , get_user_userid( id ) , BlockMsg );
+				default: set_msg_arg_string( 4 , szCurMessage );
+			}
+		}
+		else
+		{
+			set_msg_arg_string( 4 , szCurMessage );
+
+			if( szCurMessage[0] != EOS ) 
+				copy( gLastUserMessage[id], charsmax( gLastUserMessage[] ), szCurMessage );	
+		}
+	}
+}
